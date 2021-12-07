@@ -1,0 +1,51 @@
+Table 4.,,,,,
+Types of mutations detected in exons 5-9 p53 in the stratum basale of human SCC,,,,,
+,,,,,
+Base change (total no.),Coding strand,Codon p53,Sequence,AA change*,Lesion/region†
+UVA fingerprints,,,,,
+AT _ CG (6),T _ G,238,tgTa,Cys _ Trp,"SCC1,2"
+,T _ G,257,cTgg‡,Leu _ Arg,"SCC6,7"
+,T _ G,220,cTatg‡,Tyr _ Asp,"SCC8,2"
+,T _ G,203,gTgg,Val _ Gly,"SCC8,4"
+,A _ C,320,Aaga‡,Lys _ Gln,"SCC4,2"
+,A _ C,331,cAgg‡,Gln _ Pro,"SCC5,2"
+UVB fingerprints (2),C _ T,315,cCtc‡§,Ser _ Phe,"SCC7,2"
+GC _ AT,G _ A,293,aGggg‡§,Gly _ Arg,"SCC4,4"
+ROS¶,,,,,
+GC _ TA (10),G _ T,305,aaGc‡,Lys _ Asn,"SCC2,4"
+,G _ T,283,cGcca,Arg _ Leu,"SCC3,4"
+,G _ T,317,caGc,Gln _ His,"SCC4,2"
+,C _ A,309,cCca‡§,Pro _ His,"SCC1,4"
+,C _ A,289,tCtcc‡,Leu _ Met,"SCC2,4"
+,C _ A,314,tCct‡,Ser _ Tyr,"SCC4,2"
+,C _ A,316,ccCc‡§,Pro _ Pro,"SCC4,2"
+,C _ A,228,gaCt‡,Asp _ Glu,"SCC6,2"
+,C _ A,289,ctCc‡,Leu _ Leu,"SCC4,4"
+,C _ A,308,aCtgc‡,Leu _ Met,"SCC6,4"
+GC _ CG (6),G _ C,215,aGtg‡,Ser _ Thr,"SCC1,2"
+,G _ C,317,caGc‡,Gln _ His,"SCC6,4"
+,G _ C,325,tgGa‡,Gly _ Ala,"SCC7,2"
+,C _ G,228,gaCt‡,Asp _ Glu,"SCC2,4"
+,C _ G,219,ccCt‡§,Pro _ Pro,"SCC8,2"
+,C _ G,310,aaCa,Asn _ Lys,"SCC6,4"
+GC _ AT (3),C _ T,310,aaCa,Asn _ Asn,"SCC1,4"
+,C _ T,245,ggCa,Gly _ Gly,"SCC6,2"
+,C _ T,242,tgCa,Cys _ Cys,"SCC6,7"
+Other changes,,,,,
+AT _ GC (3),A _ G,307,gcAc,Ala _ Ala,"SCC1,4"
+,A _ G,204,gAgt‡,Glu _ Gly,"SCC8,4"
+,T _ C,315,cTctc‡,Ser _ Pro,"SCC5,2"
+AT _ TA (7),T _ A,274,gtTt‡,Val _ Val,"SCC5,4"
+,T _ A,278,ccTg‡,Pro _ Pro,"SCC4,4"
+,A _ T,266,ggAc‡,Gly _ Gly,"SCC2,4"
+,A _ T,280,gAgag*,Arg _ stop,"SCC3,4"
+,A _ T,281,gAcc*,Asp _ Val,"SCC3,4"
+,A _ T,311,cAaca*,Asn _ Tyr,"SCC7,2"
+,A _ T,211,cActt,Thr _ Ser,"SCC8,2"
+,,,,,
+Codons in bold type refer to hot-spot codons.,,,,,
+*Amino acid changes are shown in bold type.,,,,,
+†Lesion number and region laser-captured as defined in Fig. 1A.,,,,,
+‡Base-pair substitutions occur at sites or runs on Py-Py/Py either nontranscribed or transcribed strand.,,,,,
+§5_G of 5_-GG-3_ on either nontranscribed or transcribed strand.,,,,,
+"¶Base changes potentially attributable to UVA indirectly through the production of ROS, not used as UVA fingerprints for data analysis.",,,,,

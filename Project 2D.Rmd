@@ -1,0 +1,801 @@
+---
+title: "Project 2D"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    latex_engine: xelatex
+  html_document:
+    theme: darkly
+    toc: yes
+    toc_depth: 2
+---
+
+# Introduction
+## Scientific Question
+Can the latitudinal trends of rates of cutaneous squamous cell carcinoma be explained by mutations in the p53 gene caused by UV radiation?
+
+## Background
+Cutaneous squamous cell carcinoma (cSCC) is the second most common form of skin cancer. It is characterized by accelerated growth of squamous cells, which are cells that are found in the tissue that forms the surface of the skin. More than 75% of cSCC and BCC in humans occur on sun-exposed skin. If untreated, cSCC can spread to other parts of the body, leading to serious complications. 
+
+p53, also called TP53, is a gene that encodes for a nuclear protein involved in controlling cell division and death. It is classified as a tumor suppressor gene, and mutations in p53 have been found in most tumor types. 
+
+UV ligth is a type of light with shorter wavelengths than visible light. Prolonged exposure to UV radiation from the sun (UVA and UVB radiation), is known to be a risk factor for sunburn, premature aging, eye damage, and all kinds of skin cancers. 
+
+A recent publication used UVA and UVB radiation to mutagenize the p53 in human cells, and documented the results and the kinds of mutations that arose. Thsese are called UVA and UVB fingerprint mutations because are only found in samples that have been exposed to UV radiation and are known to be caused by UV-induced DNA damage.
+
+## Data Used
+First we will look at data published by Staples et al in their paper Non-melanoma skin cancer in Australia:the 2002 national survey and trends since 1985. They published data on the rates of cSCC by latitude, with data split up by gender, age, skin type, and latitude. We will only be looking at the total rates by latitude, to observe what kinds of latitudinal trends exist of cSCC.
+Next we will use data published by pubmed called Exposure Data that is part of an excerpt of a book called Solar and Ultraviolet Radiation. We will chart this to see if the trend of UV radiation by latitude is similar to the trend of cSCC based on latitude.
+Then we will perform multiple sequence alignment. 
+Our wild-type amino acid sequence of p53 was downloaded from NCBI gene. 
+To encode the UVA and UVB signature mutations, we will be uploading a table published by Agar et al in the publication titled: The basal layer in human squamous tumors harbors more UVA than UVB fingerprint mutations: A role for UVA in human skin carcinogenesis. (PMID:15041750) We will use this table to write code that will introduce the mutations that this paper publshed occur as a result of UV exposure to the p53 gene.
+Then we will design sequences with mutations that are in the database cBioportal in three of their samples, Clin Cancer Res 2015 Mutations, MD Anderson, Clin Cancer Res 2014, and UCSF_NPJ_Genom_Med_2021.
+Van Kempen Et Al defined a hotspot mutation in sCCC as a mutation that was present in 22% of patients sampled, so we will use this value as a threshold of what should be considered a significant mutation (hotspot mutation).
+
+
+## Hypothesis
+
+If UV radiation can cause mutations in p53 that result in cutaneous squamous cell carcinoma (cSCC), then we would expect to see places with lower latitudes experience lower levels of UV radiation, and we expect these places to have higher incidence of cSCC as well as UV fingerprint mutations in the P53 genes in cSCC tumor tissue samples.
+
+## Description of Analyses
+First we will use ggPlots to visualize data on how different latitudes experience different levels of UV radiaiton. We will also plot data on how the rates of cSCC in the population differ based on latitude. Hopefully these reveal similar trends, which would support our hypothesis. Next we will perform multiple sequence alignments. First we will generate mutant sequences that contain all of the UVA and UVB fingerprint mutations, and we will align these with our wild-type sequence to visualize the UV generated mutaitons. Next we will generate sequences that have the cBioportal mutations that were found in real tumor samples of the p53 gene of individuals with cSCC. We will align these with out wild-type and uv-mutated sequences to see if any of the UV mutations appear in the real tumor samples. We will use the information from the mutations and perform p-values to determine if we can conclude that any of these mutations are hotspot mutaitons in cSCC. 
+
+## Loading in Packages
+```{r}
+#if (!requireNamespace("BiocManager", quietly=TRUE))
+#install.packages("BiocManager")
+#library(BiocManager)
+```
+BiocManager allows me to install the necessary packages from Bioconductor. If I didn't have BiocManager I wouldn't be able to install msa for my alignments.
+```{r}
+#BiocManager::install("msa")
+library(msa)
+```
+msa is a package that has functions for performing multiple sequene alignment. I will be using this package to align my p53 sequences to observe the kinds of mutations that are found in the p53 gene.
+
+```{r}
+#install.packages("ggplot2")
+#This package is what I will use to display the UV data by latitude as well as the info for rates of cSCC by latitude
+library(ggplot2)
+```
+ggplot2 is a package that allows you to use the ggplot() function for creating graphs from data. I will be using it to create graphs that show the rates of cSCC by latitude, as well as creating graphs that show how the levels of UVA and UVB radiation vary by latitude. There are lots of cool features in ggplot2 that allow you to customize your graphs.
+
+```{r}
+#install.packages("seqinr")
+library(seqinr)
+```
+Seqinr has a lot of tools for loading in and analyzing biological data. I will be using the read.fasta() function to read in the AA sequence data that I will be using for my alignments.
+I will also be using the write.fasta() file to create individual fasta files for each mutated sequence, and then I will use fastaconc() to combine these individual files into a single fasta file that I will use for alignment.
+
+```{r}
+#install.packages("EnvNJ")
+library(EnvNJ)
+```
+I will be using the fastaconc() function from the EnvNJ package to create new fasta files that contian all of the sequences for my alignments. Since each alignment will be with the same gene, I will read in the wild-type amino acid sequence, and use this sequence as the basis for my mutated alignments. After adding the mutations, I will use fastaconc() to create new fasta files that have the sequences that I need to align so that I can just read back in these fasta files and use them in the msa function to align them.
+```{r}
+library(dplyr)
+```
+The dplyr package will allow me to use the select() function, which will help me a lot with my analysis. I will use this function when I need to select specific rows/columns from a dataframe.
+
+```{r}
+#install.packages("pdftools")
+library(pdftools)
+```
+
+My R studio has issues using the msaPrettyPrint function, and it will create a temporary pdf but will result in an error. To be able to display these alignments, I will use the pdf_convert() function to turn the pdfs that are generated by msaPrettyPrint into .png files so that I can show these in my final knitted html. 
+
+```{r}
+#install.packages("utils")
+library(utils)
+```
+The utils package has the functions read.csv and read.delim that are helpful for reading data tables into the r notebook. I downloaded a couple of tables, for example the tsv files that have information on the kinds of mutations that are found in p53 genes from cSCC tumor samples. 
+```{r}
+#install.packages('knitr', dependencies = TRUE)
+library(knitr)
+```
+The knitr package allows me to knit in the pngs that I make from hte msaPrettyPrint pdfs. Sometimes the output of the writing the pdfs into a png is not easily accesible by r, so using knitr to display the png images is the most reliable way to show them in the final html or PDF that is generated.
+```{r}
+library(tinytex)
+```
+Making sure that tinytex is in the library helps at the end when I convert the R markdown into a PDF. Just as a backup I will upload a PDF to GitHub in addition to the html and .rmd, and without tinytex the conversion isn't possible. 
+
+# Bioinformatics Methods 
+
+## 1. ggPlots
+
+The first step is to prove that the part of the hypothesis that claims that there are latitudinal differences in the rates of cSCC. 
+Our proposed mechanism states that a possible explanation for why there are different rates of cSCC by latitude could be because of different rates of UVA and UVB radiation by latitude.
+
+But how do we know that there are latitudinal differences between rates of cSCC or in levels of UVA or UVB radiation?
+
+1. Look at if there is a latitudinal difference between rates of cSCC.
+Using data from Non-melanoma skin cancer in Australia:
+the 2002 national survey and trends since 1985 by Staples et al (PMID: 26547141)
+```{r}
+scc_rates_data<-read.csv("SCC_data.csv")
+#Use the read.csv function to import the data from Staples et al
+print(scc_rates_data)
+#The table is pretty messy so we need to clean it up before we can start plotting.
+clean_scc_rates_data<-scc_rates_data[, c(1, 7)]
+#Select the first and last columns that have information on the latitude and totla number of cases of cSCC. Save as new global variable that will be cleaned and used for the plots.
+clean_scc_rates_data<-clean_scc_rates_data[c(3, 5, 7), ]
+#We aren't looking at age or gender differences, so make a simple dataframe that just has info on the latitudes and freqnecy of cSCC.
+print(clean_scc_rates_data)
+colnames(clean_scc_rates_data)<-c("Location", "Rate_of_cSCC")
+#Add column names.
+print(clean_scc_rates_data[1,2])
+#Inspect one of the elements that has wonky formatting. Lots of extra spaces on either sides of the actual number.
+clean_scc_rates_data[1,2]<-gsub("[[:space:]]", "", clean_scc_rates_data[1,2])
+#Remove the extra spaces and replace the entry with the same number but with proper formatting.
+clean_scc_rates_data[,2]<-as.numeric(as.character(clean_scc_rates_data[,2]))
+#Since we will be plotting the rates, we want them to be numeric so that ggplot doesn't think that they should be plottet alphabetically
+clean_scc_rates_data$Location <- as.character(clean_scc_rates_data$Location)
+clean_scc_rates_data$Location <- factor(clean_scc_rates_data$Location, levels=unique(clean_scc_rates_data$Location))
+#Turn the location variable which will be the x axis into a character and back into a factor so ggplot doesn't plot alphabetically and instead plots in the proper order.
+#print(clean_scc_rates_data)
+#Make sure the data looks right and is ready to be plotted.
+latitudes<-c("Low Latitude", "Medium Latitude", "High Latitude")
+#Instead of doing north central and south, put the location into context of the hypothesis and say what relative latitude they are by creating a vector that will be used to add to the dataframe.
+clean_scc_rates_data$Latitude<-latitudes  
+#Append the character vector we just wrote to the dataframe.
+print(clean_scc_rates_data)
+#Check to make sure it looks ok.
+
+cSCC_rate_plot<-ggplot(clean_scc_rates_data, aes(x=Latitude, y=Rate_of_cSCC))+scale_x_discrete(limits=clean_scc_rates_data$Latitude)+geom_point(stat="identity")
+#Use the ggplot2 package and the ggplot function to plot the data. Our x axis is the latitude, and the y axis is rates of cscc.  We are doing a geom_point becuase doing geom_line gets funky and doesn't look as clean.
+
+print(cSCC_rate_plot)
+#Print the plot to check
+```
+Based on the plot, we can see that there is a clear trend with lower latitudes having higher rates of cSCC.
+
+Let's check if there is a similar trend in latitude versus amount of UV Radiation
+
+This data was downloaded from an entry on pubmed called Solar and Ultraviolet Radiation: Exposure data  (https://www.ncbi.nlm.nih.gov/books/NBK401584/)
+```{r}
+uv_data_morning<-read.csv("uv_data_morning.csv")
+uv_data_night<-read.csv("uv_data_night.csv" )
+#clean up the data because the CSV files are little messy so start by making a global variable that is the raw table.
+clean_night_data<-uv_data_night[c(8, 9, 10, 11),]
+clean_morning_data<-uv_data_morning[c(7, 8, 9, 10),]
+print(clean_night_data)
+clean_night_data<-clean_night_data[, c(1:3)]
+clean_morning_data<-clean_morning_data[, c(1:3)]
+#Get rid of any extra rows and columns that don't have data but that were added to our global variable.
+
+print(clean_night_data)
+print(clean_morning_data)
+#print to inspect the data tables and make sure they look good.
+
+colnames(clean_night_data)<-clean_night_data[1,]
+clean_night_data<-clean_night_data[-c(1),]
+colnames(clean_morning_data)<-clean_morning_data[1,]
+clean_morning_data<-clean_morning_data[-c(1),]
+print(clean_morning_data)
+print(clean_night_data)
+#Add column names using the first row of each of the data frames. Then delete the first row since we no longer need it by using the -c() to remove that row. 
+#Print and inspect to make sure we didn't delete any necessary columns.
+
+colors <- c("UVA Radiation Night" = "blue", "UVB Radiation Night" = "purple", "UVA Radiation Morning"="red", "UVB Radiation Morning"="orange")
+#create a colors vector that assigns each condition a color so that our plots are easy to interpret. 
+
+ggplot() +
+  geom_point(data = clean_morning_data, aes(x = Latitude, y = UVA, color="UVA Radiation Morning")) +
+  geom_point(data = clean_morning_data, aes(x = Latitude, y = UVB, color="UVB Radiation Morning"))+
+  geom_point(data=clean_night_data, aes(x=Latitude, y=UVA, color="UVA Radiation Night"))+
+  geom_point(data=clean_night_data, aes(x=Latitude, y=UVB, color="UVB Radiation Night"))+ggtitle("UV Radiation By Latitude-Measured in the Morning and Night") +labs(color="Legend")+ylab("Percentage of daily UVB and UVA radiation")
+
+#Use the ggplot function to create the dot plots. Start by calling the ggplot() and then add geom_point() calls for each condition. Our x value is latitude and the y value is the UV value. Make sure we assign each color to it's respective condition. Add labs(color="Legend") so that we can see a legend and it can use the colors vector we created to label the legend.
+
+```
+Now we can see that there is also a nice trend showing that low latitudes have higher levels of UVA and UVB radiation.
+
+We can see that the trends of latitude and rates of cSCC are very similar, indicating that there may be a correlation or a causitive factor behind this. 
+
+To see if our proposed explanation for why the two trends are similar, we will look at if any of the tumor p53 samples that are present in the cBioportal database show mutations that are known to come from UVA and UVB radiation. 
+
+
+## 2. Multiple Sequence Alignment 
+Purpose:To visualize if any of the tumor samples showed the UVA or UVB fingerprint mutations in p53. These mutations were found in tumor tissue samples of individuals with cSCC.
+
+1. The first step is to load in the wild-type sequence of the p53 protein. This will be in all of the alignments and will be the basis of all of the mutated sequences that we generate. This was downloaded from NCBI's gene database (https://www.ncbi.nlm.nih.gov/gene/7157)
+
+```{r}
+wt_aa_fasta<-read.fasta("protein.fa")
+#print(wt_aa_fasta)
+#This will load in the entire file that was downloaded from NCBI. To view the entire file, uncomment the print function.
+p53_wt_aa<-wt_aa_fasta$NP_000537.3
+#print(p53_wt_aa)
+#I only want the amino acid sequence of one transcript, so I will select for only one transcript and save this to a new global variable, p53_wt_aa. 
+p53_wt_aa<-p53_wt_aa[1:393]
+print(p53_wt_aa)
+#Even after taking a subset of the entire file, there is still some extra info at the end of the sequence that I want to get rid of before doing more analysis. To see this extra information, uncomment the print command below the p53_wt_aa<-wt_aa_fasta$NP_000537.3 call. I know that the p53 gene has 393 amino acids, and I want my global variable to contain only these amino acids and none of the extraneous information. This will be used as the wild-type sequence of p53 for the rest of the analysis, and I will be altering this sequnence to create the mutated sequences. 
+```
+2. The next step is to generate the p53 sequence with the UVA fingerprint mutations from the paper: The basal layer in human squamous tumors harbors more UVA than UVB fingerprint mutations: A role for UVA in human skin carcinogenesis by Agar et al. (PMID:15041750)
+Generate UVA Mutation AA Sequence
+```{r}
+uv_mutations_file_table_3<-read.csv("Agar_et_al_table_3.csv")
+#I downloaded figure 3 from the paper. 
+print(uv_mutations_file_table_3)
+```
+The table is pretty messy and hard to interpret, so the next steps are just reducing the table down to the information that I can use in my analysis.
+```{r}
+library(dplyr)
+uva_mutations_data_table_3<-select(uv_mutations_file_table_3, c('X.1', 'X.3'))
+#print(uva_mutations_data_table_3, show="complete")
+#At this point, uva_mutations_data_table_3 is still messy, but the previous command selects the columns that I need. The only columns that I need for my analysis are the codon number and the specific amino acid change that occured.
+uva_mutations_final_data_table_3<-uva_mutations_data_table_3[5,]
+#print(uva_mutations_final_data_table_3)
+#In this table there is only one UVA mutation, and now I have that by itself with the number of the codon that is mutated and the amino acid change.
+#The variable uva_mutations_final_data_table_3 refers to the global variable for the table that I've made using the data stored in the original table. It has a long name, but I need to repeat this process with table 4 and I need to look at UVB mutations, so having a lot of info in the name of the variable will help me avoid getting confused. The previous steps are to remove extraneous rows and columns, since I just want to look at the UVA mutations. Uncomment the print functions to see what each step did.
+colnames(uva_mutations_final_data_table_3)<-c("Codon Number", "Amino Acid Change")
+#print(uva_mutations_final_data_table_3)
+#I am addding column names to the little mini-table that I've made from the original table, so that it will be easier to subset with.  
+original_amino_acid<-c("N")
+new_amino_acid<-c("T")
+#To make my future analysis easier, I am adding the amino acid letter for the original and mutated amino acid based on what is in the table. 
+uva_mutations_final_data_table_3$Original_Amino_Acid<-original_amino_acid
+#print(uva_mutations_final_data_table_3)
+uva_mutations_final_data_table_3$New_Amino_Acid<-new_amino_acid
+print(uva_mutations_final_data_table_3)
+```
+Now I have cleaned up the UVA mutation data from table 3, I want to combine it with table #4 so that I can have all of the UVA mutations from the paper in one place. 
+```{r}
+uv_mutations_file_table_4<-read.csv("Agar_et_al_table_4.csv")
+#This is table 4 from the same paper that I downloaded table 3 from in the previous chunk to do my anlaysis. 
+print(uv_mutations_file_table_4)
+```
+Unfortunately, like table 3 this table is super messy and will be hard to use until it is cleaned up. I will follow the same process to generate a similar table as what I created for the UVA mutations from table 3.
+```{r}
+uva_mutations_data_table_4<-select(uv_mutations_file_table_4, c('X.1', 'X.3'))
+uva_mutations_data_table_4<-uva_mutations_data_table_4[(5:10),]
+#print(uva_mutations_data_table_4)
+#uva_mutations_data_table_4 is the global variable that I am assigning to the rough data. Using select and [] allowed me to make a new table with just the uva mutations from the original table
+colnames(uva_mutations_data_table_4)<-c("Codon Number", "Amino Acid Change")
+#print(uva_mutations_data_table_4)
+#Adding column names to make easier to subset in the future.
+original_amino_acid_uva_4<-c("C", "L", "Y", "V", "K", "Q")
+new_amino_acid_uva_4<-c("W", "R", "D", "G", "Q", "P")
+#I am creating global variables to store the amino acid letters for the original codon and the mutation. I will use these to append to my table.
+uva_mutations_data_table_4$Original_Amino_Acid<-original_amino_acid_uva_4
+uva_mutations_data_table_4$New_Amino_Acid<-new_amino_acid_uva_4
+print(uva_mutations_data_table_4)
+#These commands append the amino acid variables to the table.
+```
+Now I have the UVA induced fingerprint mutations. To help generate the mutated amino acid sequence, I will combine these tables into one so that I have all of the data for the UVA mutations in a single dataframe.
+```{r}
+uva_mutations_final <- rbind(uva_mutations_data_table_4, uva_mutations_final_data_table_3) 
+print(uva_mutations_final)
+```
+Using the rbind function, I was able to combine both of the uva mutation tables into a single table, which I am calling uva_mutations_final. This tabel has data for all 7 of the UVA fingerprint mutations.
+Next I need to create the amino acid sequence with the UVA mutations. 
+```{r}
+uva_mutations_codon<-uva_mutations_final$`Codon Number`
+print(class(uva_mutations_codon))
+#I am creating a global variable called uva_mutations_codon that will have the numbers of the codons with mutations. 
+numeric_uva_mutations_codon<-as.numeric(uva_mutations_codon)
+print(class(numeric_uva_mutations_codon))
+print(uva_mutations_codon)
+#To use the replace function, I need the codon numbers to be numeric and not characters. Since each number corresponds to the number of an amino acid, the replace function won't work properly if it doesn't recognize the numbers as numeric. Using as.numeric() I created a new global variable, numeric_uva_mutations_codon that stores the numbers of the mutated codons as numeric values.
+uva_mutations_replacement<-uva_mutations_final$New_Amino_Acid
+print((uva_mutations_replacement))
+#I am subsetting the uva_mutations_final table that I created to get the column that had the mutated amino acid letter. This is what I will use in my replace function call to replace the wild-type amino acids so that the new sequence has the uva fingerprint mutations.
+```
+
+```{r}
+uva_mutations_sequence<-replace(p53_wt_aa, numeric_uva_mutations_codon, uva_mutations_replacement)
+```
+I am using the replace function to create my sequence with the uva fingerprint mutations! It works by taking the input, in this case the wild-type amino acid sequence, and then uses a numeric vector to look for the number corresponding to the number of the input sequence that needs to be changed. Then, it uses the final argument to know what to change to. So in our case, it uses the numeric_uva_mutations_codon to find all of the numebrs of codons that need to be changed, and uses the letters in the  uva_mutations_replacement as the replacement.
+```{r}
+#print(uva_mutations_sequence)
+#print(p53_wt_aa)
+#Since there aren't very many mutations, printing out the wild type and mutated sequence isn't really going to help us make sure that the replacement call worked. However,if the replacement numbers aren't found within the sequence, the replace function will add the numbers and what is going to be replaced at the very end of the new sequence. 
+length(uva_mutations_sequence)
+length(p53_wt_aa)
+#This means we can use the lenght of the original and the new mutated sequence to check to make sure our replace call worked. If the lengths are the same and there is no error, then our replace worked.
+```
+Since the lengths of the sequences are the same, it looks like our replace call worked!!
+Now we have a sequence with all of the fingerprint UVA mutations from the Agar et al paper, and now we will repeat these steps to generate a sequence with the UVB mutations.
+
+Generate UVB Mutations Sequence
+```{r}
+uv_mutations_file_table_3<-read.csv("Agar_et_al_table_3.csv")
+#We already had this line of code in the section where we made the sequence with uva mutations, but I am also putting it here to show how we created the global variable that has the table that we downlaoded from the paper.
+#print(uv_mutations_file_table_3)
+#uv_mutations_file_table_3 is the
+uvb_mutations_data_table_3<-uv_mutations_file_table_3[(6:14),]
+#print(uvb_mutations_data_table_3)
+final_uvb_mutations_data_table_3<-select(uvb_mutations_data_table_3, c('X.1', 'X.3'))
+#print(final_uvb_mutations_data_table_3)
+#These steps are to clean up the table so we can clearly see the information we are interested in. I created final_uvb_mutations_data_table_3 which is a global variable that we will continue to modify a bit.
+colnames(final_uvb_mutations_data_table_3)<-c("Codon Number", "Amino Acid Change")
+#Adding column names so that it will be easier to subset in the future.
+#print(final_uvb_mutations_data_table_3)
+original_amino_acid_uvb_3<-c("L", "V", "H", "P", "S", "H", "I", "V", "G")
+new_amino_acid_uvb_3<-c("L", "V", "Y", "L", "F", "Y", "I", "M", "D")
+#Using the data in our final_uvb_mutations_data_table_3 to add the one amino acid letters that we will use for the replace function. 
+
+final_uvb_mutations_data_table_3$Original_Amino_Acid<-original_amino_acid_uvb_3
+final_uvb_mutations_data_table_3$New_Amino_Acid<-new_amino_acid_uvb_3
+#Adding the vectors we made with the amino acid info to our dataframe.
+print(final_uvb_mutations_data_table_3)
+#Check the final table.
+```
+
+Nice! Looks clean, now we have to do this one more time with the uvb mutations from the other table.
+
+```{r}
+uvb_mutations_data_table_4<-uv_mutations_file_table_4[(11:12),]
+final_uvb_mutations_data_table_4<-select(uvb_mutations_data_table_4, c('X.1', 'X.3'))
+#print(final_uvb_mutations_data_table_4)
+#We already created the uv_mutations_file_table_4 earlier when we read in the csv files. 
+#Clean up the data and save it as a new global variable that we will continue to modify until it matches our other dataframes.
+
+colnames(final_uvb_mutations_data_table_4)<-c("Codon Number", "Amino Acid Change")
+#print(final_uvb_mutations_data_table_4)
+#Add the proper column names.
+
+original_amino_acid_uvb_4<-c("S", "G")
+new_amino_acid_uvb_4<-c("F", "R")
+final_uvb_mutations_data_table_4$Original_Amino_Acid<-original_amino_acid_uvb_4
+final_uvb_mutations_data_table_4$New_Amino_Acid<-new_amino_acid_uvb_4
+#Create the vectors with the amino acid info.
+#Add the amino acid vectors we just made to the data frame so that we can use this in our replace function.
+print(final_uvb_mutations_data_table_4)
+```
+Now that we have the two tables that have the information from the uvb mutations from both tables, we are ready to combine them and use them in our replace function to generate the p53 amino acid sequence with the proper mutations.
+
+```{r}
+uvb_mutations_final <- rbind(final_uvb_mutations_data_table_3, final_uvb_mutations_data_table_4) 
+print(uvb_mutations_final)
+#Combine our two uvb tables into one dataframe so we can have all of the info in the same place. This is a new global variable that we will use for our replace function.
+uvb_mutations_codon<-uvb_mutations_final$`Codon Number`
+numeric_uvb_mutations_codon<-as.numeric(uvb_mutations_codon)
+print(class(numeric_uvb_mutations_codon))
+#We will use the new numeric_uvb_mutations_codon global variable in our replace function, but we need to make sure they are numeric so that the function can use them. 
+uvb_mutations_replacement<-uvb_mutations_final$New_Amino_Acid
+#print((uvb_mutations_replacement))
+#We need to subset our dataframe and create a new global variable uvb_mutations_replacement that has the letters that the mutated AA strand will have so that we can use the replace function to generate the new AA sequence.
+
+uvb_mutations_sequence<-replace(p53_wt_aa, numeric_uvb_mutations_codon, uvb_mutations_replacement)
+length(uvb_mutations_sequence)
+length(p53_wt_aa)
+
+```
+After using the replace function, we can check to make sure it worked and that it truly replaced and didn't add anything extra by checking the length of the sequences.
+Since the lenghts are the same we can move on to the actual alignmetns!!
+*Note: I tried to make a function that would perform the code for each subsection that we needed, but this was impossible. The formatting of the tables in the paper were super funky and since the mutations for each category were random and not in the same place it was just easier to do it this way. 
+
+3. Create Alignment with Wild-Type, UVA, and UVB mutations
+```{r}
+write.fasta(sequences=p53_wt_aa, names="p53_wt_aa", file.out="p53_wt_aa.fasta")
+#Generate fasta file with wild-type p53 sequence.
+write.fasta(sequences=uva_mutations_sequence, names="uva_mutations", file.out="uva_mutations_sequence.fasta")
+#Generate fasta file with p53 containing UVA signature mutations.
+write.fasta(sequences=uvb_mutations_sequence, names="uvb_mutations", file.out="uvb_mutations_sequence.fasta")
+#Generate fasta file with p53 containing UVB signature mutations.
+```
+In order to perform the alignments using the msa packages, all of the sequences need to be in the same file. In order to do this I am usign the write.fasta function to write all of them as individual fasta files that save to my working directory. 
+
+```{r}
+fastaconc(otus=c('p53_wt_aa', 'uva_mutations_sequence', 'uvb_mutations_sequence'), inputdir = ".", out.file = "./wt_uva_uvb_clean.fasta")
+
+```
+In order to generate a single file with the sequences to align, I am using the fastaconc function to write a new file, wt_uva_uvb_clean.fasta that will be used for the alignment.
+```{r}
+wt_uva_uvb<-readAAStringSet("wt_uva_uvb_clean.fasta")
+#The input of the msa function has to be a AAStringSet, DNAStringSet, or RNAStringSet. I am using readAAStringSet because our sequences in the fasta file we just generated are protein sequences so I want it to be an AAStringSet.
+wt_uva_uvb_alignment<-msa(wt_uva_uvb, order="input")
+#This is the code that performs a basic alignment.
+print(wt_uva_uvb_alignment, show="complete")
+```
+Our alignment worked, but it is hard to see which amino acids are different and overall it's not easy to draw any conclusions from.
+
+```{r}
+#msaPrettyPrint(wt_uva_uvb_alignment, output="pdf", showNames="left", showLogo="none", showConsensus="none", askForOverwrite=FALSE, verbose=TRUE, shadingMode="identical", shadingColors="blues")
+```
+This code uses the msaPrettyPrint that generates a much prettier alignment that is a lot easier to read. 
+I didn't want there to be a consensus, which is why I had the argument showConsensus="none"
+
+*Note:Running this code generates an error because my computer struggles to use LaTeX. It generates a PDF, but puts up an error so I am commenting it out and will be knitting in the pdf that was generated from this line to avoid the error.
+```{r}
+pdf_convert("wt_uva_uvb_alignment.pdf", format = "png", pages = NULL, filenames = NULL, dpi = 300, opw = "", upw = "", verbose = TRUE)
+```
+I am using the pdf_convert to convert the pdf that was generated by the msaPrettyPrint function into a .png image. 
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+knitr::include_graphics("./wt_uva_uvb_alignment_1 copy.png")
+```
+This chunk of code allows me to display the results of the msaPrettyPrint.
+It shows the .png that we generated in the chunk above.
+
+This alignment shows the wild-type p53 protein sequence along with the UVA and UVB fingerprint mutations. I wanted to include this alignment to highlight the mutations that form in this gene as a result of UV radiation. As you can see there are 7 UVA mutations and 8 UVB mutations.
+
+
+4.Create Mutant Sequences.
+The data for this section came from the cBioportal for Cancer Genomics (https://www.cbioportal.org/)
+
+Generating 2015 Mutant Sequence
+```{r}
+#DFCI, Clin Cancer Res 2015 Mutations
+bioportal_2015_mutations<-read.delim("bioportal_2015_mutations.tsv", header=TRUE, sep="\t")
+#print(bioportal_2015_mutations)
+#I downlaoded the .tsv file directly from the bioportal website by selecting the 2015 samples and clicking mutations, and download. I am using read.delim to assign the values in the tsv value to a new global variable. If you uncomment the print call and inspect the table, you will see that there is a lot of information and we don't need all of it.
+
+clean_2015_mutations<-bioportal_2015_mutations[,c(1, 5)]
+#print(clean_2015_mutations)
+#This line creates a new table using 2 columns from the original bioportal_2015_mutations.
+raw_codon_data_2015<-c(clean_2015_mutations[,2])
+print(raw_codon_data_2015)
+
+#This creates a new list of the information we need. In this table, the authors decided to give information on the mutations by writing each mutaiton out as 
+#Original AA - Codon Number - Mutated AA
+
+
+logical_non_splice_2015<-nchar(raw_codon_data_2015)==5
+print(logical_non_splice_2015)
+#creates a list as a new global variable that says true for entries that are 5 characters and false for entries that are more than 5 characters, indicating a splice site mutation.
+index_non_splice_2015<-which(logical_non_splice_2015, arr.ind=FALSE)
+print(index_non_splice_2015)
+#The only kinds of mutations that were looking at are point mutations, we don't want to look at deletions or splice site variations. With the way that the authors wrote the data, splice site variations are written as AA-Codon Number_splice. Therefore we want to get rid of any that are longer than 5 letters since this would mean that they are splice site mutations. This code creates a list that prints the indeces of each mutation that is not a splice site in the original raw_codon_data_2015.
+
+list_without_splice_2015<-raw_codon_data_2015[index_non_splice_2015]
+print(list_without_splice_2015)
+#This code uses the list that we made in the previous lines to select only the mutations that have 5 letters, and these are all either deletions or point mutations.
+
+remove_asterisk_2015<-gsub("[[:punct:]]", "", list_without_splice_2015)
+print(remove_asterisk_2015)
+#Mutations that result in deletions are written as AA-Codon Number-*. This line of code gets rid of any of the entries that have unusual punctuation, and will remove any time there is an asterisk symbol, leaving any of the mutations that were deltions with only 4 characters since the final * will be deleted.
+logical_without_deletions_2015<-nchar(remove_asterisk_2015)==5
+print(logical_without_deletions_2015)
+index_non_deletions_2015<-which(logical_without_deletions_2015, arr.ind=FALSE)
+print(index_non_deletions_2015)
+#print(index_non_deletions_2015)
+#Now we are creating another index that will say which of the entries in our list have5 letters, or are point mutations. This global variable has the numbers for whichever entries match the criteria for being point mutations.
+
+
+list_mutations_2015<-list_without_splice_2015[index_non_deletions_2015]
+print(list_mutations_2015)
+#Use the list that we generated with the which function to subset the list of mutations without the splice site mutations to create a final list that only has point mutations.
+
+codon_number_messy_2015<-substring(list_mutations_2015 ,2)
+print(codon_number_messy_2015)
+#I want to generate a list of numbers of which codons were mutated, and this line creates a new global variable that has the numbers of the mutated amino acids without the first letter, which was the original amino acid.
+
+clean_codon_number_2015<-substring(codon_number_messy_2015, 1, 3)
+print(clean_codon_number_2015)
+#This call of the substring function removes the final letter from each entry so that it is just a list of the numbers of all of the mutated codons.
+clean_codon_number_2015<-clean_codon_number_2015[-c(2, 5, 6, 10)]
+#Removing duplicated mutations, since this will not work in our replace function.
+print(clean_codon_number_2015)
+#this is a list of all of the codons in this dataset that had point mutations.
+#This tells us how many codons we will be mutating in our sequence.
+class(clean_codon_number_2015)
+numeric_codon_number_2015<-as.numeric(clean_codon_number_2015)
+print(numeric_codon_number_2015)
+#Like in previous sections, for the replace function we need all of the codon numbers to be numeric, so we are using the as.numeric function to do this.
+
+mutated_aa_2015<-substring(list_mutations_2015, 5)
+print(mutated_aa_2015)
+#Mutated_aa_2015 is a new global variable that is a list of all of the letters of the mutated amino acids. The line of code prints out the 5th letter of each entry, which in this case is the letter of the mutated amino acid.
+clean_mutated_aa_2015<-mutated_aa_2015[-c(2, 5, 6, 10)]
+#Removing the replicates that we removed from the numbers.
+print(mutated_aa_2015)
+
+length(clean_mutated_aa_2015)
+length(clean_codon_number_2015)
+#Checking the length helps us be sure that our cleanup was succesful and that these global variables are ready for the replace function.
+
+mutations_2015_sequence<-replace(p53_wt_aa, numeric_codon_number_2015, clean_mutated_aa_2015)
+#Using the variables that we created earlier, we are once again using the replace function to generate a new sequence that contains all of the point mutations in the 2015 bioportal sample.
+
+#print(mutations_2015_sequence)
+#print(p53_wt_aa)
+length(mutations_2015_sequence)
+length(p53_wt_aa)
+```
+After checking the length we can see that our new sequence still has the same numebr of amino acids as the original, so our replace worked!!
+
+The next two sections follow the same pipeline as the section above for designing the 2015 mutant sequence. 
+Generating 2014 Mutant Sequence
+```{r}
+#MD Anderson, Clin Cancer Res 2014
+bioportal_2014_mutations<-read.delim("Clin_Cancer_Res 2014.tsv", header=TRUE, sep="\t")
+#print(bioportal_2014_mutations)
+#I downlaoded the .tsv file directly from the bioportal website by selecting the 2014 samples and clicking mutations, and download. I am using read.delim to assign the values in the tsv value to a new global variable. If you uncomment the print call and inspect the table, you will see that there is a lot of information and we don't need all of it.
+clean_2014_mutations<-bioportal_2014_mutations[,c(1, 5)]
+print(clean_2014_mutations)
+#This line creates a new table using 2 columns from the original bioportal_2014_mutations since a lot of the extra information is extraneous.
+raw_codon_data_2014<-c(clean_2014_mutations[,2])
+print(raw_codon_data_2014)
+#I am creating a new global variable from the Protein.Change colum of the table that will create a list of all of the mutations.
+logical_non_splice_2014<-nchar(raw_codon_data_2014)==5
+print(logical_non_splice_2015)
+#create a list as a new global variable that says true for entries that are 5 characters and false for entries that are more than 5 characters, indicating a splice site mutation.
+index_non_splice_2014<-which(logical_non_splice_2014, arr.ind=FALSE)
+#print(index_non_splice_2014)
+list_without_splice_2014<-raw_codon_data_2014[index_non_splice_2014]
+print(list_without_splice_2014)
+#The only kinds of mutations that were looking at are point mutations, we don't want to look at deletions or splice site variations. With the way that the authors wrote the data, splice site variations are written as AA-Codon Number_splice. Therefore we want to get rid of any that are longer than 5 letters since this would mean that they are splice site mutations. This code creates a list that prints the indexes of each mutation that is not a splice site in the original raw_codon_data_2014. This generates a new global variable, list_without_splice_2014. 
+
+remove_asterisk_2014<-gsub("[[:punct:]]", "", list_without_splice_2014)
+#Mutations that result in deletions are written as AA-Codon Number-*. This line of code gets rid of any of the entries that have unusual punctuation, and will remove any time there is an asterisk symbol, leaving any of the mutations that were deltions with only 4 characters since the final * will be deleted.
+
+logical_without_deletions_2014<-nchar(remove_asterisk_2014)==5
+index_non_deletions_2014<-which(logical_without_deletions_2014, arr.ind=FALSE)
+print(index_non_deletions_2014)
+#Now we are creating another index that will say which of the entries in our list have5 letters, or are point mutations. This global variable has the numbers for whichever entries match the criteria for being point mutations.
+list_mutations_2014<-list_without_splice_2014[index_non_deletions_2014]
+print(list_mutations_2014)
+#Use the list that we generated with the which function to subset the list of mutations without the splice site mutations to create a final list that only has point mutations.
+codon_number_messy_2014<-substring(list_mutations_2014 ,2)    
+clean_codon_number_2014<-substring(codon_number_messy_2014, 1, 3)
+print(codon_number_messy_2014)
+#I want to generate a list of numbers of which codons were mutated, and this line creates a new global variable that has the numbers of the mutated amino acids without the first letter, which was the original amino acid.
+#I also want to get rid of the final letter so that I only have the codon number for my replace function.
+clean_codon_number_2014<-clean_codon_number_2014[-c(2, 4, 5, 11, 12, 13, 15, 28)]
+#print(clean_codon_number_2014)
+
+#After printing the results of clean_codon_number_2014 I am removing any duplications that might otherwise confuse the replace function.
+
+class(clean_codon_number_2014)
+numeric_codon_number_2014<-as.numeric(clean_codon_number_2014)
+print(numeric_codon_number_2014)
+#To use the replace function the numbers that tell the function which amino acids to replace have to be numeric so we are using the as.numeric function and checking the class.
+
+mutated_aa_2014<-substring(list_mutations_2014, 5)
+#Taking only the 5th letter of the entries, which creates a list of only the amino acid that is present after the mutation.
+clean_mutated_aa_2014<-mutated_aa_2014[-c(2, 4, 5, 11, 12, 13, 15, 28)]
+#Remove  duplications that might otherwise confuse the replace function.
+
+length(clean_codon_number_2014)
+length(clean_mutated_aa_2014)
+#Checking the length helps us be sure that our cleanup was succesful and that these global variables are ready for the replace function.
+
+mutations_2014_sequence<-replace(p53_wt_aa, numeric_codon_number_2014, clean_mutated_aa_2014)
+#Using the variables that we created earlier, we are once again using the replace function to generate a new sequence that contains all of the point mutations in the 2015 bioportal sample.
+
+#print(mutations_2014_sequence)
+#print(p53_wt_aa)
+length(mutations_2014_sequence)
+length(p53_wt_aa)
+```
+
+
+After checking the length we can see that our new sequence still has the same numebr of amino acids as the original, so our replace worked!!
+
+Generating 2021 Mutant Sequence (following the same steps as the two previous samples)
+```{r}
+bioportal_2021_mutations<-read.delim("UCSF_NPJ_Genom_Med_2021.tsv" , header=TRUE, sep="\t")
+#print(bioportal_2021_mutations)
+#I downlaoded the .tsv file directly from the bioportal website by selecting the 2021 samples and clicking mutations, and download. I am using read.delim to assign the values in the tsv value to a new global variable. If you uncomment the print call and inspect the table, you will see that there is a lot of information and we don't need all of it.
+clean_2021_mutations<-bioportal_2021_mutations[,c(1, 5)]
+raw_codon_data_2021<-c(clean_2021_mutations[,2])
+#print(raw_codon_data_2021)
+#Cleaning up the data and generating a new global variable that has entries for each of the mutations found in the sample.
+
+logical_non_splice_2021<-nchar(raw_codon_data_2021)==5
+print(logical_non_splice_2021)
+#create a list as a new global variable that says true for entries that are 5 characters and false for entries that are more than 5 characters, indicating a splice site mutation.
+index_non_splice_2021<-which(logical_non_splice_2021, arr.ind=FALSE)
+#print(index_non_splice_2021)
+
+list_without_splice_2021<-raw_codon_data_2021[index_non_splice_2021]
+print(list_without_splice_2021)
+#The only kinds of mutations that were looking at are point mutations, we don't want to look at deletions or splice site variations. With the way that the authors wrote the data, splice site variations are written as AA-Codon Number_splice. Therefore we want to get rid of any that are longer than 5 letters since this would mean that they are splice site mutations. This code creates a list that prints the indexes of each mutation that is not a splice site in the original raw_codon_data_2014. This generates a new global variable, list_without_splice_2021. 
+remove_asterisk_2021<-gsub("[[:punct:]]", "", list_without_splice_2021)
+#Mutations that result in deletions are written as AA-Codon Number-*. This line of code gets rid of any of the entries that have unusual punctuation, and will remove any time there is an asterisk symbol, leaving any of the mutations that were deltions with only 4 characters since the final * will be deleted.
+
+logical_without_deletions_2021<-nchar(remove_asterisk_2021)==5
+print(logical_without_deletions_2021)
+#After removing the final asterisk in any deletions, create a list that says true for mutations that are 5 letters, which are point mutations, or that are 4 letters that were deletions that had their final * removed.
+
+index_non_deletions_2021<-which(logical_without_deletions_2021, arr.ind=FALSE)
+print(index_non_deletions_2021)
+#Now we are creating another index that will say which of the entries in our list have5 letters, or are point mutations. This global variable has the numbers for whichever entries match the criteria for being point mutations. 
+list_mutations_2021<-list_without_splice_2021[index_non_deletions_2021]
+print(list_mutations_2021)
+#Use the list that we generated with the which function to subset the list of mutations without the splice site mutations to create a final list that only has point mutations.
+
+codon_number_messy_2021<-substring(list_mutations_2021 ,2)
+clean_codon_number_2021<-substring(codon_number_messy_2021, 1, 3)
+#print(clean_codon_number_2021)
+#I want to generate a list of numbers of which codons were mutated, and this line creates a new global variable that has the numbers of the mutated amino acids without the first letter, which was the original amino acid.
+#I also want to get rid of the final letter so that I only have the codon number for my replace function.
+clean_codon_number_2021<-clean_codon_number_2021[-c(2, 3, 4, 6, 11, 12, 13, 14, 15, 18, 51)]
+#Remove any replications that will mess with our final replace call.
+#print(clean_codon_number_2021)
+class(clean_codon_number_2021)
+numeric_codon_number_2021<-as.numeric(clean_codon_number_2021)
+#print(numeric_codon_number_2021)
+#To use the replace function the numbers that tell the function which amino acids to replace have to be numeric so we are using the as.numeric function and checking the class.
+
+mutated_aa_2021<-substring(list_mutations_2021, 5)
+clean_mutated_aa_2021<-mutated_aa_2021[-c(2, 3, 4, 6, 11, 12, 13, 14, 15, 18, 51)]
+#Create a new global variable that is a list of the 5th letter of the entries, which is the letter of the mutated amino acid but selecting the 5th letter of each entry.
+
+length(numeric_codon_number_2021)
+length(clean_mutated_aa_2021)
+#Checking the length helps us be sure that our cleanup was succesful and that these global variables are ready for the replace function.
+
+
+mutations_2021_sequence<-replace(p53_wt_aa, numeric_codon_number_2021, clean_mutated_aa_2021)
+#Using the variables that we created earlier, we are once again using the replace function to generate a new sequence that contains all of the point mutations in the 2015 bioportal sample.
+#print(mutations_2021_sequence)
+#print(p53_wt_aa)
+length(mutations_2021_sequence)
+length(p53_wt_aa)
+```
+After checking the length we can see that our new sequence still has the same numebr of amino acids as the original, so our replace worked!!
+
+5. Turn Sequences into Fasta Files and Concatenate
+```{r}
+write.fasta(sequences=p53_wt_aa, names="p53_wt_aa", file.out="p53_wt_aa.fasta")
+write.fasta(sequences=mutations_2015_sequence, names="mutations_2015_sequence", file.out="mutations_2015_sequence.fasta")
+write.fasta(sequences=mutations_2014_sequence, names="mutations_2014_sequence", file.out="mutations_2014_sequence.fasta")
+write.fasta(sequences=mutations_2021_sequence, names="mutations_2021_sequence", file.out="mutations_2021_sequence.fasta")
+```
+Once again, the msa alignment needs all of the sequences in each alignment to be combined into a single file.
+To do this we are using the write.fasta function to turn all of the sequences that we just made into fasta files.
+
+fastaconc(otus=c('p53_wt_aa', 'uva_mutations_sequence', 'uvb_mutations_sequence'), inputdir = ".", out.file = "./wt_uva_uvb.fasta")
+
+fastaconc(otus=c('p53_wt_aa', 'uva_mutations_sequence', 'uvb_mutations_sequence', 'mutations_2015_sequence', 'mutations_2014_sequence', 'mutations_2021_sequence'), inputdir = ".", out.file = "./wt_uv_bioportal_mutations.fasta")
+
+
+
+```{r}
+wt_uv_bioportal_mutations<-readAAStringSet("wt_uv_bioportal_mutations.fasta")
+#Use the readAAStringSet to make a new global variable that containes the concatenated fasta file that we just made. The name of the file is specified in the file.out argument of the fastaconc call. We are using readAAStringSet becuase are sequences are amino acid sequences, and AAStringSets can be used by msa to write alignments.
+wt_uv_bioportal_mutations_alignment<-msa(wt_uv_bioportal_mutations, order="input")
+#This code uses the msa multiple sequence alignment function to align the sequences.
+print(wt_uv_bioportal_mutations, show="complete")
+```
+Once again this isn't super pretty or easy to interpret, so lets use msaPrettyPrint to clean it up and make it easier to read. 
+
+```{r}
+#msaPrettyPrint(wt_uv_bioportal_mutations_alignment, output="pdf", showNames="left", showLogo="none", showConsensus="none", askForOverwrite=FALSE, verbose=TRUE, shadingMode="identical", shadingColors="blues")
+```
+This code generates a pdf called wt_uv_bioportal_mutations_alignment.pdf, but because my R studio has trouble communicating with LaTeX it results in an error, so I am commenting it out. 
+
+```{r}
+pdf_convert("wt_uv_bioportal_mutations_alignment.pdf", format = "png", pages = NULL, filenames = NULL, dpi = 300, opw = "", upw = "", verbose = TRUE)
+```
+This code converts the pdf that was generated by the prettyprint into a png that can be knit into this R document so we can see the results of our alignment.
+
+```{r, out.width="0.3\\linewidth", include=TRUE, fig.align="center", fig.cap=c("your caption"), echo=FALSE}
+knitr::include_graphics("./wt_uv_bioportal_mutations_alignment_1.png")
+
+```
+Using the knitr package, we can show the .png that we generated from the original pdf into this document. 
+
+After taking a look at the alignment, we can see that there aren't very many of the UV mutations that appear in the bioportal sequences.
+
+P values 
+
+## 3. P-Value
+Based on the results of the alignment, we can see that only one of the UV fingerprint mutations appeared in any of the p53 sequences from cBioportal. This mutation is a UVA fingerptint mutation that changes a C to a W, and on our alignment we see that at least one of the sequences in the 2021 sample have this mutation. 
+
+Let's first query the bioportal databases to see how many times this mutation appears.
+
+```{r}
+
+print(uva_mutations_final)
+#We see it in our UVA alignment
+#The mutation of interest: 
+UVA_mutation<-"C238W"
+#We are assigning a new global variable that will be used in our calculations going forward.
+
+#print(clean_2014_mutations$Protein.Change)
+#print(clean_2015_mutations$Protein.Change)
+#print(clean_2021_mutations$Protein.Change)
+#Uncommenting the prints above shows all of the lists of mutations.
+
+#It is possible that our replace function may not have worked or introduced all of the mutations, so I want to query the lists of mutations to make sure we get the exact number of times this mutaiton was recorded in these three samples.
+
+
+logical_MOI_2014<-clean_2014_mutations$Protein.Change==UVA_mutation
+logical_MOI_2015<-clean_2015_mutations$Protein.Change==UVA_mutation
+logical_MOI_2021<-clean_2021_mutations$Protein.Change==UVA_mutation
+#print(logical_MOI_2014)
+#print(logical_MOI_2015)
+#print(logical_MOI_2021)
+#These codes create lists that have output TRUE if entry matches the mutation, and false if the mutation does not appear in the entry.
+
+index_MOI_2014<-which(logical_MOI_2014, arr.ind=TRUE)
+index_MOI_2015<-which(logical_MOI_2015, arr.ind=TRUE)
+index_MOI_2021<-which(logical_MOI_2021, arr.ind=TRUE)
+#Now we can use the logical_MOI global variables that we created to make a new global variable, which is essentially just a list that will output whichever entries were TRUE, meaning they matched our mutation of interest.
+
+number_of_MOI_2014<-length(index_MOI_2014)
+number_of_MOI_2015<-length(index_MOI_2015)
+number_of_MOI_2021<-length(index_MOI_2021)
+print(number_of_MOI_2014)
+print(number_of_MOI_2015)
+print(number_of_MOI_2021)
+#Now we can use the length function to cound the index_MOI global variables, and assign the legnths to new global variables. These global variables will have the number of times that the mutation of interest appeared in each sample.
+```
+This means that out of all of the samples in the 2021 dataset, 2 of them had a UV induced mutation.
+
+Next we need to figure out the sample size by looking at the bioportal mutations tables that we created earlier.
+```{r}
+#print(bioportal_2014_mutations)
+samples_2014<-bioportal_2014_mutations$Sample.ID
+samples_2015<-bioportal_2015_mutations$Sample.ID
+samples_2021<-bioportal_2021_mutations$Sample.ID
+#We want to make a new list out of the column in the original table that hase the information on the sample ID. These are new global variables that have the information from the origianl table.
+unique_samples_2014<-unique(samples_2014)
+unique_samples_2015<-unique(samples_2015)
+unique_samples_2021<-unique(samples_2021)
+#print(unique_samples_2014)
+#print(unique_samples_2015)
+#print(unique_samples_2021)
+#Many of the samples had multiple p53 mutations, so we want to create a new global variable that has the number of unique samples by using the unique() function.
+
+number_of_samples_2014<-length(unique_samples_2014)
+number_of_samples_2015<-length(unique_samples_2015)
+number_of_samples_2021<-length(unique_samples_2021)
+print(number_of_samples_2014)
+print(number_of_samples_2015)
+print(number_of_samples_2021)
+#Using the length function, we can make new global variables that have the length of the unique samples, which means the new variables that we are making equal the number of unique samples, and tells us the sample size and number of individuals from each study.
+
+```
+Averages from our samples
+```{r}
+mean_MOI_2014<-number_of_MOI_2014/number_of_samples_2014
+mean_MOI_2015<-number_of_MOI_2015/number_of_samples_2015
+mean_MOI_2021<-number_of_MOI_2021/number_of_samples_2021
+print(mean_MOI_2014)
+print(mean_MOI_2015)
+print(mean_MOI_2021)
+#We can make a new global variable that stores the mean of the frequency of the mutation. We caluclate this by dividing the number of times that the mutation appears in the sample (number_of_MOI_) with the total number of individuals in each sample (number_of_samples_). 
+
+all_three_samples<-c(mean_MOI_2014, mean_MOI_2015, mean_MOI_2021)
+print(all_three_samples)
+class(all_three_samples)
+#For our p value calculation we need the mean from multiple samples, so we need to make a new global variable that is a vector that has the mean from each sample.
+mean_samples<-mean(all_three_samples)
+sd_samples<-sd(all_three_samples)
+#Now we can use the mean() and sd() calculations on the all_three_samples_variable to find the average and standard deviation from each sample.
+
+sum_of_samples<-sum(number_of_samples_2014, number_of_samples_2015, number_of_samples_2021)
+print(sum_of_samples)
+#To get the total sample size, we can make a new global variable that uses the sum() function to get the sum of each number of samples from all 3 of the datasets.
+```
+
+Now we are ready to calculate a P-Value!
+
+Van Kempen Et Al defined a hotspot mutation in sCCC as a mutation that was present in 22% of patients sampled. Our null hypotheis will be that 22% of the mutations should have this UV mutation for it to be considered a hotspot mutation.
+
+We will be performing a one-sided T test, and if we determine that the mean of the sample is significantly lower than .22 and we reject the null hypothesis, we will say that our findings are not indicitave that UV radiation could be causitive of cSCC.
+
+```{r}
+xbar<-mean_samples
+#When using p values, the xbar is the mean of the actual, studied sample. We are going to be using the mean_samples global variable that we wrote earlier that took the mean of the frequency of the mutation over all three samples.
+#print(xbar)
+a=0.22
+#The a value refers to our null hypothesis. We are using 0.22 because in the literature others have published data claiming that a certain mutation is a hotspot mutation when it appears in 22% of samples, and we want to test if our UV mutation could be considered a hotspot mutation.
+std_dev=sd_samples
+#The std_dev is the global variable that we wrote earlier when we took the standard deviation of the 3 groups.
+n=sum_of_samples
+#n is the sample size, and we will use the global variable that we wrote earlier that took the sum of all of the samples.]
+
+p_value_function<-function(xbar_1, a_1, std_dev_1, n_1){
+  #the arguments of this function will be xbar_1, or the standard mean, a_1 or the value of the null hypothesis, std_dev_1 or the standard deviation, and n_1 or the sample size.
+ z_value<-(xbar_1-a_1)/(std_dev_1/sqrt(n_1))
+ #the first step is to caluclate the z value with the xbar, a, standard deviation, and sample size
+  p_value<-pnorm(-abs(z_value))
+  #the p value is determined by inputting the negative absolute value of the z value into the pnorm function.
+  return(p_value)
+  #we want our function to return the p value that was calculated so we can interpret the final p value.
+}
+p_value_function(xbar, a, std_dev, n)
+#Input our experimental values to get the p value.
+```
+The p value is 0. In the contex of our one-sided p-value anlaysis, this small of a p value indicates we can reject the null hypothesis. This means that in our sample the average rate of this mutation was significanlty smaller than what would be needed to be considered a hotspot mutation.
+
+# Results 
+Based on the results of our analysis, we cannot conclude that the latitudinal difference in rates of cSCC are due to higher frequencies of UV-induced mutations in the p53 gene. Our plotting showed that there might be a correlation between latitude and rate of cSCC becuase of the similar trend that rates of cSCC show when compared to UV radiation. It is possible that there may be another way that UV radiation is impacting DNA that results in higher rates of cSCC in places with high levels of UV radiation, but our results did not elucidate a pathway. We performed multiple sequence alignment to determine if any of the published UVA or UVB fingerprint mutations were common in p53 tumor samples that are published in the cBioportal database. This analysis revealed one UVA mutation that was present the actual cSCC tumor samples. Our P value revealed that the frequency of this mutation was signifcianlty lower than the threshold for being considered a hotspot mutation. A possible explanation could be that there are other mutations that are only induced my UV radiation but that have not yet been discovered. Another explanation could be that possibly the cBioportal samples were all taken from a high latitude or regions with overall lower rates of cSCC. 
+
+

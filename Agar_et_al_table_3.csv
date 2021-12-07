@@ -1,0 +1,38 @@
+Table 3.,,,,,
+Types of mutations detected in exons 5-9 p53 in the stratum granulosum of human SCC,,,,,
+,,,,,
+Base change (total no.),Coding strand,Codon p53,Sequence,AA change*,Lesion region 
+UVA fingerprints,,,,,
+AT _ CG (1),A _ C,311,caAcaà,Asn _ Thr,"SCC4,1"
+UVB fingerprints,C _ T,289,ctCcà,Leu _ Leu,"SCC1,1"
+GC _ AT (9),C _ T,157,gtCcà,Val _ Val,"SCC1,6"
+,C _ T,233,cCactà¤,His _ Tyr,"SCC1,3"
+,C _ T,318,cCaaà¤,Pro _ Leu,"SCC4,1"
+,C _ T,314,tCctà,Ser _ Phe,"SCC4,3"
+,C _ T,296,tCaccà,His _ Tyr,"SCC4,6"
+,C _ T,251,atCcà,Ile _ Ile,"SCC7,1"
+,G _ A,197,aGtggà,Val _ Met,"SCC3,1"
+,G _ A,226,gGctà,Gly _ Asp,"SCC6,6"
+ROS¦,,,,,
+GC _ TA (6),G _ T,290,cGca,Arg _ Leu,"SCC4,6"
+,C _ A,195,atCcà,Ile _ Ile,"SCC3,1"
+,C _ A,208,gaCa,Asp _ Glu,"SCC3,1"
+,C _ A,312,acCaà¤,Thr _ Thr,"SCC4,1"
+,C _ A,309,cCcaà¤,Pro _ His,"SCC4,3"
+,C _ A,313,agCtà,Ser _ Arg,"SCC4,3"
+GC _ CG (6),G _ C,271,tGaggà,Glu _ Gln,"SCC1,3"
+,G _ C,228,tGactà,Asp _ His,"SCC6,6"
+,G _ C,326,aGaatà,Glu _ Gln,"SCC6,6"
+,C _ G,190,cCtcà¤,Pro _ Arg,"SCC1,1"
+,C _ G,252,cCtcaà¤,Leu _ Val,"SCC7,1"
+,C _ G,301,gCcccà,Pro _ Ala,"SCC1,3"
+GC _ AT (1),C _ T,310,aaCa,Asn _ Asn,"SCC4,1"
+Other changes,,,,,
+AT _ GC (3),T _ C,195,aTccà,Ile _ Thr,"SCC1,1"
+,A _ G,196,cgAgà,Arg _ Arg,"SCC3,1"
+,A _ G,249,gAggcà,Arg _ Gly,"SCC1,1"
+AT _ TA (3),T _ A,134,gTtttà,Phe _ Ile,"SCC1,6"
+,A _ T,195,tAtcc,Ile _ Phe,"SCC1,1"
+,A _ T,310,aAcaà,Asn _ Ile,SCC4.3
+CpG sites (2),C _ T,152,cCgcà¤,Pro _ Leu,"SCC1,6"
+,C _ T,158,cCgcgà¤,Arg _ Cys,"SCC1,6"
